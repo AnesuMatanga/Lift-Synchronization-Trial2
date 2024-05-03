@@ -49,6 +49,7 @@ typedef struct {
 	int waitingtogodown;    // The number of people waiting to go down
 	semaphore up_arrow;     // People going up wait on this
 	semaphore down_arrow;   // People going down wait on this
+	semaphore mutex;
 } floor_info;
 
 // --------------------------------------------------
@@ -105,14 +106,18 @@ void get_into_lift(lift_info *lift, int direction) {
 		// Use up_arrow semaphore
 		s = &floors[lift->position].up_arrow;
 
+		semaphore_wait(&floors[lift->position].mutex);
 		// Number of people waiting to go up
 		waiting = &floors[lift->position].waitingtogoup;
+		semaphore_signal(&floors[lift->position].mutex);
 	} else {
 		// Use down_arrow semaphore
 		s = &floors[lift->position].down_arrow;
 
+		semaphore_wait(&floors[lift->position].mutex);
 		// Number of people waiting to go down
 		waiting = &floors[lift->position].waitingtogodown;
+		semaphore_signal(&floors[lift->position].mutex);
 	}
 
 	// For all the people waiting
@@ -253,8 +258,10 @@ void* person_thread(void *p) {
 
 		// Check which direction the person is going (UP/DOWN)
 		if(to > from) {
+			semaphore_wait(&floors[from].mutex);
 			// One more person waiting to go up
 			floors[from].waitingtogoup++;
+			semaphore_signal(&floors[from].mutex);
 			
 			// Print person waiting
 			print_at_xy(NLIFTS*4+ floors[from].waitingtogoup +floors[from].waitingtogodown,NFLOORS-from, pr);
@@ -265,8 +272,10 @@ void* person_thread(void *p) {
 			lift = pickupLift; // Capture the lift reference
 			semaphore_signal(&pickupLiftMutex);
 		} else {
+			semaphore_wait(&floors[from].mutex);
 			// One more person waiting to go down
 			floors[from].waitingtogodown++;
+			semaphore_signal(&floors[from].mutex);
 			
 			// Print person waiting
 			print_at_xy(NLIFTS*4+floors[from].waitingtogodown+floors[from].waitingtogoup,NFLOORS-from, pr);
@@ -352,11 +361,16 @@ int main() {
 		floors[i].waitingtogodown = 0;
 		semaphore_create(&floors[i].up_arrow, 0);
 		semaphore_create(&floors[i].down_arrow, 0);
+		semaphore_create(&floors[i].mutex, 1);
 	}
 
 	// --- Initialise any other semaphores ---
+	// With 1 so they act as mutexes
 	semaphore_create(&pickupLiftMutex, 1);
 	semaphore_create(&printMutex, 1);
+	//semaphore_create(&floorMutex, 1);
+	semaphore_create(&liftMutex, 1);
+
 
 	// Print Building
 	printbuilding();
