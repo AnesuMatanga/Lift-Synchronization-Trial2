@@ -278,7 +278,7 @@ void* person_thread(void *p) {
 		
 		// Which lift we are getting into
 //---		
-		lift = &pickupLift;
+		//lift = pickupLift;
 
 		// Add one to passengers waiting for floor
 		lift->stops[to]++;
