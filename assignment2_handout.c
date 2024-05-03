@@ -101,25 +101,26 @@ void get_into_lift(lift_info *lift, int direction) {
 	int *waiting;
 	semaphore *s;
 
+	semaphore_wait(&floors[lift->position].mutex);
 	// Check lift direction
 	if(direction==UP) {
-		semaphore_wait(&floors[lift->position].mutex);
+		//semaphore_wait(&floors[lift->position].mutex);
 		// Use up_arrow semaphore
 		s = &floors[lift->position].up_arrow;
 
 		//semaphore_wait(&floors[lift->position].mutex);
 		// Number of people waiting to go up
 		waiting = &floors[lift->position].waitingtogoup;
-		semaphore_signal(&floors[lift->position].mutex);
+		//semaphore_signal(&floors[lift->position].mutex);
 	} else {
-		semaphore_wait(&floors[lift->position].mutex);
+		//semaphore_wait(&floors[lift->position].mutex);
 		// Use down_arrow semaphore
 		s = &floors[lift->position].down_arrow;
 
 		//semaphore_wait(&floors[lift->position].mutex);
 		// Number of people waiting to go down
 		waiting = &floors[lift->position].waitingtogodown;
-		semaphore_signal(&floors[lift->position].mutex);
+		//semaphore_signal(&floors[lift->position].mutex);
 	}
 
 	// For all the people waiting
@@ -133,18 +134,21 @@ void get_into_lift(lift_info *lift, int direction) {
 		// Check there are people waiting and lift isn't full
 		if(lift->peopleinlift < MAXNOINLIFT && *waiting > 0) {
 			//---
-			semaphore_wait(&pickupLiftMutex);
-			pickupLift = lift;
-			semaphore_signal(s);
-			semaphore_signal(&pickupLiftMutex);
+		
 			// Add person to the lift
 			lift->peopleinlift++;
 
-			semaphore_wait(&floors[lift->position].mutex);
+			semaphore_wait(&pickupLiftMutex);
+			pickupLift = lift;
+			//semaphore_signal(s);
+			semaphore_signal(&pickupLiftMutex);
+
+			semaphore_signal(s);
+			//semaphore_wait(&floors[lift->position].mutex);
 			// Erase the person from the waiting queue
 			print_at_xy(NLIFTS*4+floors[lift->position].waitingtogodown + floors[lift->position].waitingtogoup, NFLOORS-lift->position, " ");
-			semaphore_signal(&floors[lift->position].mutex);
-
+			//semaphore_signal(&floors[lift->position].mutex);
+			
 			// One less person waiting
 			(*waiting)--;
 
@@ -158,6 +162,7 @@ void get_into_lift(lift_info *lift, int direction) {
 			break;
 		}
 	}
+	semaphore_signal(&floors[lift->position].mutex);
 }
 
 // --------------------------------------------------
