@@ -103,18 +103,20 @@ void get_into_lift(lift_info *lift, int direction) {
 
 	// Check lift direction
 	if(direction==UP) {
+		semaphore_wait(&floors[lift->position].mutex);
 		// Use up_arrow semaphore
 		s = &floors[lift->position].up_arrow;
 
-		semaphore_wait(&floors[lift->position].mutex);
+		//semaphore_wait(&floors[lift->position].mutex);
 		// Number of people waiting to go up
 		waiting = &floors[lift->position].waitingtogoup;
 		semaphore_signal(&floors[lift->position].mutex);
 	} else {
+		semaphore_wait(&floors[lift->position].mutex);
 		// Use down_arrow semaphore
 		s = &floors[lift->position].down_arrow;
 
-		semaphore_wait(&floors[lift->position].mutex);
+		//semaphore_wait(&floors[lift->position].mutex);
 		// Number of people waiting to go down
 		waiting = &floors[lift->position].waitingtogodown;
 		semaphore_signal(&floors[lift->position].mutex);
@@ -138,8 +140,10 @@ void get_into_lift(lift_info *lift, int direction) {
 			// Add person to the lift
 			lift->peopleinlift++;
 
+			semaphore_wait(&floors[lift->position].mutex);
 			// Erase the person from the waiting queue
 			print_at_xy(NLIFTS*4+floors[lift->position].waitingtogodown + floors[lift->position].waitingtogoup, NFLOORS-lift->position, " ");
+			semaphore_signal(&floors[lift->position].mutex);
 
 			// One less person waiting
 			(*waiting)--;
@@ -261,10 +265,11 @@ void* person_thread(void *p) {
 			semaphore_wait(&floors[from].mutex);
 			// One more person waiting to go up
 			floors[from].waitingtogoup++;
-			semaphore_signal(&floors[from].mutex);
+			//semaphore_signal(&floors[from].mutex);
 			
 			// Print person waiting
 			print_at_xy(NLIFTS*4+ floors[from].waitingtogoup +floors[from].waitingtogodown,NFLOORS-from, pr);
+			semaphore_signal(&floors[from].mutex);
 			
 //---			// Wait for a lift to arrive (going up)
 			semaphore_wait(&floors[from].up_arrow);
@@ -275,10 +280,11 @@ void* person_thread(void *p) {
 			semaphore_wait(&floors[from].mutex);
 			// One more person waiting to go down
 			floors[from].waitingtogodown++;
-			semaphore_signal(&floors[from].mutex);
+			//semaphore_signal(&floors[from].mutex);
 			
 			// Print person waiting
 			print_at_xy(NLIFTS*4+floors[from].waitingtogodown+floors[from].waitingtogoup,NFLOORS-from, pr);
+			semaphore_signal(&floors[from].mutex);
 			
 //---			// Wait for a lift to arrive (going down)
 			semaphore_wait(&floors[from].down_arrow);
