@@ -70,6 +70,8 @@ floor_info floors[NFLOORS];
 lift_info *pickupLift;
 semaphore pickupLiftMutex;
 semaphore printMutex;
+semaphore floorMutex;
+semaphore liftMutex;
 // --------------------------------------------------
 // Print a string on the screen at position (x,y)
 // --------------------------------------------------
