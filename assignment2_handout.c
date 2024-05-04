@@ -49,7 +49,7 @@ typedef struct {
 	int waitingtogodown;    // The number of people waiting to go down
 	semaphore up_arrow;     // People going up wait on this
 	semaphore down_arrow;   // People going down wait on this
-	semaphore mutex;
+	semaphore mutex;		// To use to Protect floors data from threads
 } floor_info;
 
 // --------------------------------------------------
@@ -69,9 +69,9 @@ typedef struct {
 // --------------------------------------------------
 floor_info floors[NFLOORS];
 lift_info *pickupLift;
-semaphore pickupLiftMutex;
-semaphore printMutex;
-semaphore floorMutex;
+semaphore pickupLiftMutex;		// Protect the pickupLift global var
+semaphore printMutex;			// Protect the print function for better printing flow
+//semaphore floorMutex;
 semaphore liftMutex;
 // --------------------------------------------------
 // Print a string on the screen at position (x,y)
@@ -101,6 +101,7 @@ void get_into_lift(lift_info *lift, int direction) {
 	int *waiting;
 	semaphore *s;
 
+	// Protect Floor data from threads using mutex
 	semaphore_wait(&floors[lift->position].mutex);
 	// Check lift direction
 	if(direction==UP) {
@@ -143,6 +144,7 @@ void get_into_lift(lift_info *lift, int direction) {
 			//semaphore_signal(s);
 			semaphore_signal(&pickupLiftMutex);
 
+			// Saw it fit to put this here to signal person to enter lift before erasing
 			semaphore_signal(s);
 			//semaphore_wait(&floors[lift->position].mutex);
 			// Erase the person from the waiting queue
@@ -151,11 +153,14 @@ void get_into_lift(lift_info *lift, int direction) {
 			
 			// One less person waiting
 			(*waiting)--;
+
+			// Release floor mutex before sleep
 			semaphore_signal(&floors[lift->position].mutex);
 
 			// Wait for person to get into lift
 			Sleep(GETINSPEED);
 
+			// Reaquire floor mutex after sleep incase there is more work
 			semaphore_wait(&floors[lift->position].mutex);
 //---			// Set which lift the passenger should enter
 //---			// Signal passenger to enter
@@ -269,6 +274,7 @@ void* person_thread(void *p) {
 
 		// Check which direction the person is going (UP/DOWN)
 		if(to > from) {
+			// acquire mutex, floor data waitingtogoup before modification
 			semaphore_wait(&floors[from].mutex);
 			// One more person waiting to go up
 			floors[from].waitingtogoup++;
@@ -276,10 +282,13 @@ void* person_thread(void *p) {
 			
 			// Print person waiting
 			print_at_xy(NLIFTS*4+ floors[from].waitingtogoup +floors[from].waitingtogodown,NFLOORS-from, pr);
+			
+			// Release lock, unlock mutex
 			semaphore_signal(&floors[from].mutex);
 			
 //---			// Wait for a lift to arrive (going up)
 			semaphore_wait(&floors[from].up_arrow);
+			// Acquire pickupLiftMutex to assign the correct lift person should get into
 			semaphore_wait(&pickupLiftMutex);
 			lift = pickupLift; // Capture the lift reference
 			semaphore_signal(&pickupLiftMutex);
@@ -295,6 +304,7 @@ void* person_thread(void *p) {
 			
 //---			// Wait for a lift to arrive (going down)
 			semaphore_wait(&floors[from].down_arrow);
+			// Acquire pickupLiftMutex to assign the correct lift person should get into
 			semaphore_wait(&pickupLiftMutex);
 			lift = pickupLift; // Capture the lift reference
 			semaphore_signal(&pickupLiftMutex);
