@@ -21,7 +21,7 @@
 // Define delay times (in milliseconds)
 // --------------------------------------------------
 #define SLOW
-// #define FAST
+//#define FAST
 
 #if defined(SLOW)
 	#define LIFTSPEED 50      // The time it takes for the lift to move one floor
@@ -151,10 +151,12 @@ void get_into_lift(lift_info *lift, int direction) {
 			
 			// One less person waiting
 			(*waiting)--;
+			semaphore_signal(&floors[lift->position].mutex);
 
 			// Wait for person to get into lift
 			Sleep(GETINSPEED);
 
+			semaphore_wait(&floors[lift->position].mutex);
 //---			// Set which lift the passenger should enter
 //---			// Signal passenger to enter
 			//semaphore_signal(s);
